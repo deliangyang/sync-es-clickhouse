@@ -2,3 +2,4 @@
 data.txt
 config.py
 /__pycache__/
+/*.tar.gz

@@ -3,9 +3,11 @@ import json
 from queue import Queue
 from threading import Thread
 from urllib.parse import quote
-from config import url, headers
+
 import requests
 from retrying import retry
+
+from config import url, headers
 
 
 class Writer(Thread):
@@ -36,13 +38,14 @@ class Writer(Thread):
             self.push(data)
 
     def push(self, data):
+        __data_str = '\n'.join(data)
         try:
             print('%s, sync count: %d' % (self.name, len(data)))
-            self.submit('\n'.join(data))
+            self.submit(__data_str)
             print('%s sync done, next' % self.name)
         except Exception as e:
             with open(self.fail_log, 'a+') as fw:
-                fw.write('\n'.join(data))
+                fw.write(__data_str)
             print(e)
             exit(1)
 
@@ -87,7 +90,7 @@ def args():
 if __name__ == '__main__':
     args = args()
 
-    q = Queue()
+    q = Queue(10000)
     reader = Reader(args.file, q)
     reader.start()
 
