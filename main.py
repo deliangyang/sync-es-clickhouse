@@ -1,6 +1,7 @@
 import argparse
 import json
-from queue import Queue
+import traceback
+from queue import Queue, Empty
 from threading import Thread
 from urllib.parse import quote
 
@@ -25,15 +26,23 @@ class Writer(Thread):
     def run(self) -> None:
         print('%s start sync' % self.name)
         data = []
-        while not self.queue.empty():
-            _line = self.queue.get()
-            source = json.loads(_line)
-            source['_source']['time'] *= 1000
-            data.append(json.dumps(source['_source']))
-            if len(data) < self.size:
-                continue
-            self.push(data)
-            data = []
+        while True:
+            try:
+                _line = self.queue.get(True, timeout=3)
+                source = json.loads(_line)
+                source['_source']['time'] *= 1000
+                data.append(json.dumps(source['_source']))
+                if len(data) < self.size:
+                    continue
+                self.push(data)
+                data = []
+            except Empty:
+                print("empty Queue")
+                break
+            except Exception as e:
+                traceback.print_exc()
+                print(e)
+                break
         if len(data) > 0:
             self.push(data)
 
@@ -66,7 +75,7 @@ class Reader(Thread):
 
     def run(self) -> None:
         for line in self.read():
-            q.put(line)
+            self.queue.put(line)
 
     def read(self):
         with open(self.filename, 'r') as fr:
